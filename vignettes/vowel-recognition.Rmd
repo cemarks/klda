@@ -15,5 +15,184 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(rkda)
+library(klda)
+```
+
+# Vowel Data Vignette
+
+This vignette reproduces the analyses in Chapter 4.3 in Hastie, T., Tibshirani, R., & Friedman, J. H. (2009), *The elements of statistical learning: data mining, inference, and prediction,* 2nd ed. New York: Springer, pp 106--119.  It then uses kernel regression to extend the analysis and improve the results.
+Hastie, et al refer to this type of generalization as "Flexible Discriminant Analysis," (FDA) discussed in Chapter 12.5, pp 440--455.  Using kernel regression 
+as a substitute linear model fits into the FDA framework, but this specific model substitution is not developed or analyzed in the text.  The text is available at
+[ESL](https://hastie.su.domains/ElemStatLearn/).
+
+## Data
+
+The data used for the analysis in Chapters 4.3 and 12.5 in Hastie, et al come from a vowel recognition problem.  This data is made available on the [ESL](https://hastie.su.domains/ElemStatLearn/) site.  For convenience, it is included in the `extdata` folder within this package.
+
+### Load Vowel Data
+
+```{r}
+vowel_train <- read.csv(
+  system.file("extdata", "vowel_train.csv", package = "klda")
+)
+vowel_test <- read.csv(
+  system.file("extdata", "vowel_test.csv", package = "klda")
+)
+```
+
+### Preprocessing
+
+The following steps remove the `row.name` column from the vowel data and then normalize the predictor columns to have zero mean and unit standard deviation.
+Test data is normalized using training data means and standard devations.
+
+```{r}
+# Remove row.names
+vowel_train <- vowel_train[, which(names(vowel_train) != "row.names")]
+vowel_test <- vowel_test[, which(names(vowel_test) != "row.names")]
+
+## Get predictor means and standard deviations from the training data.
+predictor_vars <- paste("x", 1:10, sep = ".")
+train_means <- apply(vowel_train[, predictor_vars], 2, mean)
+train_stddevs <- apply(vowel_train[, predictor_vars], 2, sd)
+
+## A function to help normalize columns
+normalize_x <- function(
+    x,
+    means,
+    stddevs,
+    predictor_vars
+) {
+    x_norm <- x
+    for (pv in predictor_vars) {
+        x_norm[, pv] <- (x[, pv] - means[pv]) / stddevs[pv]
+    }
+    return(x_norm)
+}
+
+## Produce normalized training and test data
+vowel_train_norm <- normalize_x(
+    vowel_train,
+    train_means,
+    train_stddevs,
+    predictor_vars
+)
+
+vowel_test_norm <- normalize_x(
+    vowel_test,
+    train_means,
+    train_stddevs,
+    predictor_vars
+)
+```
+
+# Linear Discriminant Analysis (LDA)
+
+First, we verify that these methods reproduce the results in Hastie, et al.  The `klda` package provides a `linear_fda` function for testing purposes, as well as the `kernel_fda` function to perform kernel-regression FDA.  For the purposes of this vignette, we demonstrate both.
+
+## LDA using `linear_fda`
+
+The code below fits the LDA model and plots the first two coordinates, reproducing the analysis behind the plot in Figure 4.4, p. 107 in Hastie, et al.  Note that the coordinate axes could be reversed from Figure 4.4, resulting from differences in the positive directions of the Eigenvectors coming out of the Eigenvector decomposition.
+
+```{r}
+start_time <- Sys.time()
+lda <- linear_fda(
+    y~.,
+    vowel_train_norm
+)
+end_time <- Sys.time()
+
+cat(sprintf("Model time: %1.2f\n", end_time - start_time))
+
+g <- plot_kda(lda)
+print(g)
+```
+
+The plot function can be used to show other dimensions from the classification model as well.  Below we see Coordinate 2 vs. Coordinate 3, as in the upper right quadrant of Figure 4.8 (p. 115, Hastie, et al).
+
+```{r}
+g <- plot_kda(lda, vowel_test_norm, 1, 3)
+print(g)
+```
+
+Finally, we can examine misclassification rates using the `test_kda` method.  These rates can be compared to the performance rates given in Table 12.3, p. 444 in Hastie, et al.
+
+```{r}
+# Training performance
+training_performance <- test_kda(lda)
+
+# Test performance
+test_performance <- test_kda(lda, vowel_test_norm)
+```
+
+## LDA using `kernel_fda`
+
+This section repeats the analysis of the last section, but this time using the `kernel_fda` method.  The `kernel_fda` function is the workhorse of this package.  If no kernel function is provided, it defaults to a linear kernel.  However, it still procedurally uses kernel substitution, which might be less efficient than the `linear_fda` method.
+
+```{r}
+start_time <- Sys.time()
+klda <- kernel_fda(
+    y~.,
+    vowel_train_norm
+)
+end_time <- Sys.time()
+
+cat(sprintf("Model time: %1.2f\n", end_time - start_time))
+
+g <- plot_kda(klda)
+print(g)
+
+g <- plot_kda(klda, vowel_test_norm, 1, 3)
+print(g)
+
+# Training performance
+training_performance <- test_kda(klda)
+
+# Test performance
+test_performance <- test_kda(klda, vowel_test_norm)
+```
+
+# Kernel LDA
+
+Now we demonstrate the utility of kernel substitution in Linear Discriminant Analysis using the `kernel_fda` function.  We make use of the `kernlab` package, which includes efficient implementations of common kernels (`kernlab::dots`).  User-defined kernels can be used but should be coded in a similar fashion, i.e., as generator functions.
+
+We use the radial basis kernel, `kernlab::rbfdot`.  As in the previous case, we can plot the results along the different coordinates, but this time the results differ from the LDA results in Figures 4.4 and 4.8 from Hastie, et al.
+
+```{r}
+start_time <- Sys.time()
+kda <- kernel_fda(
+    y~.,
+    vowel_train_norm,
+    kerneldot = kernlab::rbfdot,
+    lambda = 1,
+    sigma = 0.1
+)
+end_time <- Sys.time()
+
+cat(sprintf("Model time: %1.2f\n", end_time - start_time))
+
+g <- plot_kda(kda)
+print(g)
+
+g <- plot_kda(lda, vowel_test_norm, 1, 3)
+print(g)
+```
+
+We can examine misclassification rates again using the `test_kda` method.  Note that the performance of this model is comparable with the best-performing models presented in Hastie, et al (see Table 12.3, p. 444 in Hastie, et al.).
+
+```{r}
+# Training performance
+training_performance <- test_kda(lda)
+
+# Test performance
+test_performance <- test_kda(lda, vowel_test_norm)
+```
+
+Finally, we can call the `predict` method to make predictions on new data or, if not provided, on the training data.  Because the `kda` object is of `mda::fda` class, it uses the `mda::predict.fda` method.  See the documentation for this method, and for the `mda` package for more information.
+
+```{r}
+test_predictions <- predict(kda, vowel_test_norm)
+for (pt in 1:10) {
+  cat(sprintf("Point %i: Actual %i, Predicted %i\n",
+    pt, test_predictions[pt], vowel_test_norm$y[pt]))
+}
 ```
