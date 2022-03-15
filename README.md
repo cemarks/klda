@@ -27,6 +27,7 @@ See the package documentation examples and vignettes.  Below is an abbreviated e
 
 ```r
 # R Code
+library(klda)
 data(iris)
 
 # Separate into training & test
