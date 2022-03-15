@@ -1,8 +1,11 @@
 ## ---- include = FALSE---------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 8
 )
+
 
 ## ----setup--------------------------------------------------------------------
 library(klda)
@@ -116,7 +119,7 @@ cat(sprintf("Model time: %1.2f\n", end_time - start_time))
 g <- plot_kda(kda)
 print(g)
 
-g <- plot_kda(lda, vowel_test_norm, 1, 3)
+g <- plot_kda(kda, vowel_test_norm, 1, 3)
 print(g)
 
 ## -----------------------------------------------------------------------------
@@ -128,8 +131,8 @@ test_performance <- test_kda(lda, vowel_test_norm)
 
 ## -----------------------------------------------------------------------------
 test_predictions <- predict(kda, vowel_test_norm)
-for (pt in 1:10) {
+for (pt in 1:20) {
   cat(sprintf("Point %i: Actual %i, Predicted %i\n",
-    pt, test_predictions[pt], vowel_test_norm$y[pt]))
+    pt, vowel_test_norm$y[pt], test_predictions[pt]))
 }
 
