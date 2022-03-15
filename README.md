@@ -9,12 +9,14 @@ This repository contains a minimal code implementations of kernel Linear Discrim
 This package can be installed from the `devtools` package:
 
 ```r
+# R Code
 devtools::install_github("cemarks/klda")
 ```
 
 Alternatively, clone the repository and build/install the package.
 
 ```bash
+# SHELL
 git clone https://github.com/cemarks/klda
 R CMD INSTALL klda
 ```
@@ -24,8 +26,9 @@ R CMD INSTALL klda
 See the package documentation examples and vignettes.  Below is an abbreviated example from the package documentation.
 
 ```r
-> data(iris)
-#'
+# R Code
+data(iris)
+
 # Separate into training & test
 data_permutation_order <- sample(nrow(iris))
 train_cutoff <- round(0.75 * nrow(iris))
