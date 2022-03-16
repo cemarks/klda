@@ -2,7 +2,7 @@ Package: klda
 Title: Kernel Linear Discriminant Analysis
 Version: 1.0.0
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
+    person("Christopher", "Marks", , "cemarks@alum.mit.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-6118-1990"))
 Description: Extends the Flexible Discriminant Analysis (FDA) classification method presented in "The Elements of Statistical Learning and Data Mining, 2nd Ed," (Hastie, et al, 2017, see pp 106--119,440--455) to make use of kernel regression methods. 
 License: MIT + file LICENSE
